@@ -1,5 +1,14 @@
 services:
 
+  api-gateway:
+    build:
+      context: api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    environment:
+      - GATEWAY_SERVER_PORT
+    restart: always
+
   registry-service:
     build:
       context: registry-service
@@ -9,5 +18,5 @@ services:
       - EUREKA_CLIENT_REGISTER_WITH_EUREKA
       - EUREKA_CLIENT_FETCH_REGISTRY
       - EUREKA_SERVER_ENABLE_SELF_PRESERVATION
-      - SERVER_PORT
+      - REGISTRY_SERVER_PORT
     restart: always
