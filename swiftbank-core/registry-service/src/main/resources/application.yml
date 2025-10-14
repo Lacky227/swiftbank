@@ -10,4 +10,4 @@ eureka:
     enable-self-preservation: {EUREKA_SERVER_ENABLE_SELF_PRESERVATION}
 
 server:
-  port: {SERVER_PORT}
+  port: {REGISTRY_SERVER_PORT}
