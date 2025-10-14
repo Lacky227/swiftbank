@@ -28,9 +28,6 @@ public class User {
     @Column(nullable = false)
     private String lastName;
 
-    @Column(unique = true, nullable = false, length = 15)
-    private String phoneNumber;
-
     @Column(unique = true, nullable = false)
     private String email;
 
