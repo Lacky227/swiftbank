@@ -3,4 +3,4 @@ spring:
     name: api-gateway
 
 server:
-  port: {SERVER_PORT}
+  port: {GATEWAY_SERVER_PORT}
