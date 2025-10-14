@@ -1,0 +1,18 @@
+# IntelliJ IDEA
+.idea/
+shelf/
+httpRequests/
+dataSources/
+dataSources.local.xml
+*.iml
+*.iws
+*.ipr
+
+# Maven
+target/
+
+# Local environment variables
+.env
+
+# Log files
+*.log
