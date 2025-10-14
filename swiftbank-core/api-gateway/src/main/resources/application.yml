@@ -2,5 +2,10 @@ spring:
   application:
     name: api-gateway
 
+eureka:
+  client:
+    service-url:
+      defaultZone: {EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE}
+
 server:
   port: {GATEWAY_SERVER_PORT}
