@@ -21,3 +21,13 @@ services:
       - EUREKA_SERVER_ENABLE_SELF_PRESERVATION
       - REGISTRY_SERVER_PORT
     restart: always
+
+  auth-service:
+    build:
+      context: auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    environment:
+      - AUTH_SERVER_PORT
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE
+    restart: always
