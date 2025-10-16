@@ -7,6 +7,7 @@ import com.swiftbank.authservice.models.Token;
 import com.swiftbank.authservice.models.User;
 import com.swiftbank.authservice.models.enumModel.UserRole;
 import com.swiftbank.authservice.repository.AuthRepository;
+import com.swiftbank.authservice.repository.TokenRepository;
 import com.swiftbank.authservice.service.AuthService;
 import com.swiftbank.authservice.utils.ValidationUtils;
 import lombok.AllArgsConstructor;
@@ -24,6 +25,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AuthServiceImpl implements AuthService {
     private final AuthRepository authRepository;
+    private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
@@ -115,6 +117,29 @@ public class AuthServiceImpl implements AuthService {
                 jwtService.generateToken(user.get().getEmail(), user.get().getRole().toString()),
                 token.getRefreshToken(),
                 user.get().getRole().toString()
+        ));
+    }
+
+    @Override
+    public ResponseEntity<?> refresh(RefreshTokenRequest request) {
+        Optional<Token> foundToken = tokenRepository.findByRefreshToken(request.getRefreshToken());
+        if (foundToken.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        if (foundToken.get().getExpiresAt().isBefore(LocalDateTime.now())) {
+            tokenRepository.delete(foundToken.get());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        User user = foundToken.get().getUser();
+
+        foundToken.get().setRefreshToken(UUID.randomUUID().toString());
+        tokenRepository.save(foundToken.get());
+
+        return ResponseEntity.status(HttpStatus.OK).body(new AuthResponse(
+                jwtService.generateToken(user.getEmail(), user.getRole().toString()),
+                foundToken.get().getRefreshToken(),
+                user.getRole().toString()
         ));
     }
 
