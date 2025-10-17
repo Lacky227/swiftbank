@@ -12,7 +12,7 @@ public class RouteConfig {
         return builder.routes()
                 .route("auth-service", r -> r
                         .path("/auth/**")
-                        .uri("http://auth-service:8081/"))
+                        .uri("lb://auth-service"))
                 .build();
     }
 }
