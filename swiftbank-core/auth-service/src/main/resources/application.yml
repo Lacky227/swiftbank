@@ -14,5 +14,8 @@ eureka:
     service-url:
       defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE}
 
+jwt:
+  secret-key: ${JWT_SECRET_KEY}
+
 server:
   port: ${AUTH_SERVER_PORT}
