@@ -4,10 +4,10 @@ spring:
 
 eureka:
   client:
-    register-with-eureka: {EUREKA_CLIENT_REGISTER_WITH_EUREKA}
-    fetch-registry: {EUREKA_CLIENT_FETCH_REGISTRY}
+    register-with-eureka: ${EUREKA_CLIENT_REGISTER_WITH_EUREKA}
+    fetch-registry: ${EUREKA_CLIENT_FETCH_REGISTRY}
   server:
-    enable-self-preservation: {EUREKA_SERVER_ENABLE_SELF_PRESERVATION}
+    enable-self-preservation: ${EUREKA_SERVER_ENABLE_SELF_PRESERVATION}
 
 server:
-  port: {REGISTRY_SERVER_PORT}
+  port: ${REGISTRY_SERVER_PORT}
