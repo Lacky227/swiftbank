@@ -1,6 +1,5 @@
 package com.swiftbank.authservice.service.impl;
 
-import com.swiftbank.JwtService;
 import com.swiftbank.authservice.dto.*;
 import com.swiftbank.authservice.models.DeviceInfo;
 import com.swiftbank.authservice.models.Token;
@@ -9,6 +8,7 @@ import com.swiftbank.authservice.models.enumModel.UserRole;
 import com.swiftbank.authservice.repository.AuthRepository;
 import com.swiftbank.authservice.repository.TokenRepository;
 import com.swiftbank.authservice.service.AuthService;
+import com.swiftbank.authservice.service.JwtService;
 import com.swiftbank.authservice.utils.ValidationUtils;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
