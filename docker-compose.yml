@@ -4,6 +4,8 @@ services:
     container_name: postgres
     ports:
       - "${POSTGRES_PORT}:5432"
+    networks:
+      - swiftbank-network
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -19,6 +21,8 @@ services:
     container_name: registry-service
     ports:
       - "8761:8761"
+    networks:
+      - swiftbank-network
     environment:
       EUREKA_CLIENT_REGISTER_WITH_EUREKA: ${EUREKA_CLIENT_REGISTER_WITH_EUREKA}
       EUREKA_CLIENT_FETCH_REGISTRY: ${EUREKA_CLIENT_FETCH_REGISTRY}
@@ -33,6 +37,8 @@ services:
     container_name: api-gateway
     depends_on:
       - registry-service
+    networks:
+      - swiftbank-network
     ports:
       - "8080:8080"
     environment:
@@ -48,6 +54,8 @@ services:
     depends_on:
       - postgres
       - registry-service
+    networks:
+      - swiftbank-network
     environment:
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
@@ -59,3 +67,7 @@ services:
 
 volumes:
   pgdata:
+
+networks:
+  swiftbank-network:
+    driver: bridge
