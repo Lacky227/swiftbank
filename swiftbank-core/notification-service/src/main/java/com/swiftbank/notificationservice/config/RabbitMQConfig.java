@@ -11,16 +11,9 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
-    public static final String SUBSCRIPTION_QUEUE_NAME = "auth-to-notif";
     public static final String RESET_QUEUE_NAME = "reset-password-queue";
     public static final String EXCHANGE_NAME = "auth-exchange";
-    public static final String SUBSCRIPTION_ROUTING_KEY = "auth.to.notif";
     public static final String RESET_ROUTING_KEY = "auth.to.reset";
-
-    @Bean
-    public Queue subscriptionQueue() {
-        return new Queue(SUBSCRIPTION_QUEUE_NAME, true);
-    }
 
     @Bean
     public Queue resetQueue() {
@@ -30,11 +23,6 @@ public class RabbitMQConfig {
     @Bean
     public DirectExchange exchange() {
         return new DirectExchange(EXCHANGE_NAME);
-    }
-
-    @Bean
-    public Binding subscriptionBinding(Queue subscriptionQueue, DirectExchange exchange) {
-        return BindingBuilder.bind(subscriptionQueue).to(exchange).with(SUBSCRIPTION_ROUTING_KEY);
     }
 
     @Bean
