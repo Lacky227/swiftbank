@@ -6,6 +6,22 @@ spring:
     port: ${SPRING_RABBITMQ_PORT}
     username: ${SPRING_RABBITMQ_USERNAME}
     password: ${SPRING_RABBITMQ_PASSWORD}
+  mail:
+   host: ${SPRING_MAIL_HOST}
+   port: ${SPRING_MAIL_PORT}
+   username: ${SPRING_MAIL_USERNAME}
+   password: ${SPRING_MAIL_PASSWORD}
+   properties:
+    mail:
+     smtp:
+       auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH}
+       starttls:
+        enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE}
+
+notification:
+  from: ${NOTIFICATION_FROM}
+  subject: ${NOTIFICATION_SUBJECT}
+  link: ${NOTIFICATION_LINK}
 
 server:
   port: ${NOTIFY_SERVER_PORT}
