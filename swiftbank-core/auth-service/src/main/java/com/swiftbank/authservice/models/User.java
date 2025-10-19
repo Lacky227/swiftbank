@@ -41,14 +41,10 @@ public class User {
 
     private String registrationSource;
 
-    @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
-    @CreatedDate
-    @Column(nullable = false)
     private LocalDateTime lastLoginAt;
 
     @Enumerated(EnumType.STRING)
