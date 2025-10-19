@@ -9,7 +9,7 @@ public class ValidationUtils {
     private final String PASSWORD_PATTERN =
             "^(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+=\\-\\[\\]{};':\"\\\\|,.<>/?]).{8,30}$";
     private final String NAME_PATTERN =
-            "^[A-Za-zА-Яа-яЇїІіЄєҐґ\\-\\s]$";
+            "^[A-Za-zА-Яа-яЇїІіЄєҐґ\\-\\s]+$";
 
     public boolean emailInvalid(String email) {
         if (email == null || email.isEmpty()) return true;
