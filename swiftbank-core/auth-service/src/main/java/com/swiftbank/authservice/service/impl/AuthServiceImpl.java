@@ -57,6 +57,8 @@ public class AuthServiceImpl implements AuthService {
                 .acceptTerms(request.isAcceptTerms())
                 .marketingConsent(request.isMarketingConsent())
                 .registrationSource(request.getRegistrationSource())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .role(UserRole.USER)
                 .active(true)
                 .build();
