@@ -1,7 +1,7 @@
 package com.swiftbank.notificationservice.service;
 
 import com.swiftbank.notificationservice.dto.MallingRequest;
-import com.swiftbank.notificationservice.utils.TokenUtils;
+import com.swiftbank.notificationservice.dto.ResetPayload;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -26,29 +26,42 @@ public class SendService {
     private String from;
     @Value("${notification.subject}")
     private String subject;
-    @Value("${notification.link}")
-    private String link;
+    @Value("${notification.link-en}")
+    private String linkEN;
+    @Value("${notification.link-ua}")
+    private String linkUA;
 
-    public void forgotPassword(String email) {
-        String token = TokenUtils.generateToken();
+    public void forgotPassword(ResetPayload resetPayload) {
+        String link;
+        if (resetPayload.getLocale().equals("ua")) {
+            link = linkUA;
+        } else {
+            link = linkEN;
+        }
         MallingRequest mallingRequest = MallingRequest.builder()
-                .email(email)
+                .email(resetPayload.getEmail())
                 .subject(subject)
-                .link(link + "?token" + token)
+                .link(link + "?token=" + resetPayload.getResetToken())
+                .locale(resetPayload.getLocale())
                 .build();
         try {
             sendEmail(mallingRequest);
         } catch (MessagingException e) {
             throw new RuntimeException(e);
         }
-        redisService.saveToken(email, passwordEncoder.encode(token));
+        redisService.saveToken(resetPayload.getEmail(), passwordEncoder.encode(resetPayload.getResetToken()));
     }
 
     private void sendEmail(MallingRequest request) throws MessagingException {
         Context context = new Context();
 
         context.setVariable("link", request.getLink());
-        String html = templateEngine.process("", context);
+        String html;
+        if (request.getLocale().equals("ua")) {
+            html = templateEngine.process("email-template-ua", context);
+        } else{
+            html = templateEngine.process("email-template-en", context);
+        }
         String plainText = Jsoup.parse(html).text();
 
         MimeMessage mimeMessage = mailSender.createMimeMessage();
