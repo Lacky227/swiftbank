@@ -26,7 +26,8 @@ spring:
 notification:
   from: ${NOTIFICATION_FROM}
   subject: ${NOTIFICATION_SUBJECT}
-  link: ${NOTIFICATION_LINK}
+  link-en: ${NOTIFICATION_LINK_EN}
+  link-ua: ${NOTIFICATION_LINK_UA}
 
 ttl:
   minutes: ${REDIS_TTL_MINUTES}
