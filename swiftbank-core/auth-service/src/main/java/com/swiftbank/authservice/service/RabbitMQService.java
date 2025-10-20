@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 public class RabbitMQService {
     private final RabbitTemplate rabbitTemplate;
 
-    public void sendResetPassword(String message) {
+    public void sendResetPassword(Object message) {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_NAME,
                 RabbitMQConfig.RESET_ROUTING_KEY,
