@@ -1,8 +1,6 @@
 package com.swiftbank.authservice.controller;
 
-import com.swiftbank.authservice.dto.LoginRequest;
-import com.swiftbank.authservice.dto.RefreshTokenRequest;
-import com.swiftbank.authservice.dto.RegisterRequest;
+import com.swiftbank.authservice.dto.*;
 import com.swiftbank.authservice.service.AuthService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,5 +28,15 @@ public class AuthController {
     @PostMapping("/refresh")
     ResponseEntity<?> refresh(@RequestBody RefreshTokenRequest refreshTokenRequest) {
         return authService.refresh(refreshTokenRequest);
+    }
+
+    @PostMapping("/forgot")
+    ResponseEntity<?> forgot(@RequestBody ForgotRequest forgotRequest) {
+        return authService.forgotPassword(forgotRequest);
+    }
+
+    @PostMapping("/reset")
+    ResponseEntity<?> reset(@RequestBody ResetRequest resetRequest) {
+        return authService.resetPassword(resetRequest);
     }
 }
