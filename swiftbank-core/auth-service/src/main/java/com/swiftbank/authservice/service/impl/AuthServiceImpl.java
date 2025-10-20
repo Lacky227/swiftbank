@@ -9,6 +9,8 @@ import com.swiftbank.authservice.repository.AuthRepository;
 import com.swiftbank.authservice.repository.TokenRepository;
 import com.swiftbank.authservice.service.AuthService;
 import com.swiftbank.authservice.service.JwtService;
+import com.swiftbank.authservice.service.RabbitMQService;
+import com.swiftbank.authservice.service.RedisService;
 import com.swiftbank.authservice.utils.ValidationUtils;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,6 +31,8 @@ public class AuthServiceImpl implements AuthService {
     private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RabbitMQService rabbitMQService;
+    private final RedisService  redisService;
 
     @Override
     public ResponseEntity<?> register(RegisterRequest request) {
@@ -147,11 +152,48 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseEntity<?> forgotPassword(ForgotRequest request) {
-        return null;
+        if (ValidationUtils.emailInvalid(request.getEmail())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email is invalid");
+        }
+        Optional<User> user = authRepository.findByEmail(request.getEmail());
+        if (user.isEmpty()) {
+            return ResponseEntity.ok("If an account with this email exists, a password reset link has been sent.");
+        }
+        DeviceInfo device = user.get().getDevices().stream()
+                .filter(d -> Objects.equals(d.getIpAddress(), request.getIpAddress()) && Objects.equals(d.getUserAgent(), request.getUserAgent())
+                ).findFirst().orElse(null);
+        if (device == null) {
+            return ResponseEntity.ok("If an account with this email exists, a password reset link has been sent.");
+        }
+        ResetPayload resetPayload = ResetPayload.builder()
+                .email(request.getEmail())
+                .resetToken(UUID.randomUUID().toString())
+                .locale(request.getLocale())
+                .build();
+        rabbitMQService.sendResetPassword(resetPayload);
+        return ResponseEntity.ok("If an account with this email exists, a password reset link has been sent.");
     }
 
     @Override
     public ResponseEntity<?> resetPassword(ResetRequest request) {
-        return null;
+        if (request.getToken() == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Token is invalid");
+        }
+        String hashToken = passwordEncoder.encode(request.getToken());
+        String email = redisService.getValue(hashToken);
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid token");
+        }
+        Optional<User> user = authRepository.findByEmail(email);
+        user.get().setPassword(passwordEncoder.encode(request.getNewPassword()));
+        String refreshToken = UUID.randomUUID().toString();
+        user.get().getToken().setRefreshToken(refreshToken);
+        authRepository.save(user.get());
+        redisService.deleteValue(hashToken);
+        return ResponseEntity.status(HttpStatus.OK).body(new AuthResponse(
+                jwtService.generateToken(email, user.get().getRole().toString()),
+                refreshToken,
+                user.get().getRole().toString()
+        ));
     }
 }
