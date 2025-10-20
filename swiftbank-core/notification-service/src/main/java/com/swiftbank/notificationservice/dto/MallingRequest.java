@@ -11,4 +11,5 @@ public class MallingRequest {
     private String email;
     private String subject;
     private String link;
+    private String locale;
 }
