@@ -83,6 +83,8 @@ services:
     depends_on:
       - postgres
       - registry-service
+      - redis
+      - rabbitmq
     networks:
       - swiftbank-network
     environment:
@@ -90,6 +92,13 @@ services:
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST}
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT}
+      SPRING_RABBITMQ_USERNAME: ${SPRING_RABBITMQ_USERNAME}
+      SPRING_RABBITMQ_PASSWORD: ${SPRING_RABBITMQ_PASSWORD}
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT}
+      SPRING_DATA_REDIS_PASSWORD: ${SPRING_DATA_REDIS_PASSWORD}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       AUTH_SERVER_PORT: ${AUTH_SERVER_PORT}
       EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: ${EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE}
@@ -102,6 +111,7 @@ services:
     container_name: notification-service
     depends_on:
       - redis
+      - rabbitmq
     networks:
       - swiftbank-network
     ports:
