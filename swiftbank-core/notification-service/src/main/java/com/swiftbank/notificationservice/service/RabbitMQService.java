@@ -12,7 +12,7 @@ public class RabbitMQService {
     private final SendService sendService;
 
     @RabbitListener(queues = RabbitMQConfig.RESET_QUEUE_NAME)
-    public void receiveMessage(Object message) {
-        sendService.forgotPassword((ResetPayload) message);
+    public void receiveMessage(ResetPayload message) {
+        sendService.forgotPassword(message);
     }
 }
