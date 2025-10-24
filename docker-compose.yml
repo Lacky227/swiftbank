@@ -28,11 +28,25 @@ services:
       - redis_data:/data
     restart: always
 
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    depends_on:
+      - redis
+    ports:
+      - "${REDIS_COMMANDER_PORT}:8081"
+    networks:
+      - swiftbank-network
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD}
+    restart: always
+
   rabbitmq:
-    image: rabbitmq:latest
+    image: rabbitmq:management
     container_name: rabbitmq
     ports:
       - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
     networks:
       - swiftbank-network
     environment:
@@ -144,6 +158,7 @@ volumes:
   pgdata:
   redis_data:
   rabbitmq_data:
+  redis_insight_data:
 
 networks:
   swiftbank-network:
