@@ -43,13 +43,11 @@ public class AuthServiceImpl implements AuthService {
         if (ValidationUtils.lastNameInvalid(request.getLastName())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Last name is invalid");
         }
-        if (ValidationUtils.emailInvalid(request.getEmail())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email is invalid. Enter valid email address");
-        } else if (authRepository.existsByEmail(request.getEmail())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Email already exists");
+        if (ValidationUtils.emailInvalid(request.getEmail()) || authRepository.existsByEmail(request.getEmail())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email is invalid");
         }
         if (ValidationUtils.passwordInvalid(request.getPassword())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password is invalid. Password must be at least 8 characters long");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password is invalid");
         }
 
         User user = User.builder()
@@ -100,31 +98,27 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseEntity<?> login(LoginRequest request) {
-        if (ValidationUtils.emailInvalid(request.getEmail())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email is invalid");
+        if (ValidationUtils.emailInvalid(request.getEmail()) || ValidationUtils.passwordInvalid(request.getPassword())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid email or password");
         }
-        Optional<User> user = authRepository.findByEmail(request.getEmail());
-        if (user.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Invalid email");
-        }
-        if (ValidationUtils.passwordInvalid(request.getPassword())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password is invalid");
-        } else if (!passwordEncoder.matches(request.getPassword(), user.get().getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid password");
+        Optional<User> userOpt = authRepository.findByEmail(request.getEmail());
+        if (userOpt.isEmpty() || !passwordEncoder.matches(request.getPassword(), userOpt.get().getPassword())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Invalid email or password");
         }
 
+        User user = userOpt.get();
         Token token = Token.builder()
                 .refreshToken(UUID.randomUUID().toString())
                 .expiresAt(LocalDateTime.now().plusDays(60))
-                .user(user.get())
+                .user(user)
                 .build();
-        user.get().setToken(token);
+        user.setToken(token);
 
-        authRepository.save(user.get());
+        authRepository.save(user);
         return ResponseEntity.status(HttpStatus.OK).body(new AuthResponse(
-                jwtService.generateToken(user.get().getEmail(), user.get().getRole().toString()),
+                jwtService.generateToken(user.getEmail(), user.getRole().toString()),
                 token.getRefreshToken(),
-                user.get().getRole().toString()
+                user.getRole().toString()
         ));
     }
 
@@ -153,9 +147,6 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseEntity<?> forgotPassword(ForgotRequest request) {
-        if (ValidationUtils.emailInvalid(request.getEmail())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email is invalid");
-        }
         Optional<User> user = authRepository.findByEmail(request.getEmail());
         if (user.isEmpty()) {
             return ResponseEntity.ok("If an account with this email exists, a password reset link has been sent.");
@@ -178,23 +169,27 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public ResponseEntity<?> resetPassword(ResetRequest request) {
         if (request.getToken() == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Token is invalid");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired token");
         }
         String hashToken = HashUtils.sha256(request.getToken());
         String email = redisService.getValue(hashToken);
-        if (email == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid token");
+        Optional<User> userOpt = (email != null) ? authRepository.findByEmail(email) : Optional.empty();
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired token");
         }
-        Optional<User> user = authRepository.findByEmail(email);
-        user.get().setPassword(passwordEncoder.encode(request.getNewPassword()));
+        if (ValidationUtils.passwordInvalid(request.getNewPassword())){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("New password is invalid");
+        }
+        User user = userOpt.get();
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         String refreshToken = UUID.randomUUID().toString();
-        user.get().getToken().setRefreshToken(refreshToken);
-        authRepository.save(user.get());
+        user.getToken().setRefreshToken(refreshToken);
+        authRepository.save(user);
         redisService.deleteValue(hashToken);
         return ResponseEntity.status(HttpStatus.OK).body(new AuthResponse(
-                jwtService.generateToken(email, user.get().getRole().toString()),
+                jwtService.generateToken(email, user.getRole().toString()),
                 refreshToken,
-                user.get().getRole().toString()
+                user.getRole().toString()
         ));
     }
 }
