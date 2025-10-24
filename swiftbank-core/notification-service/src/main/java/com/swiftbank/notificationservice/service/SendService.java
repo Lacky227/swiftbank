@@ -2,6 +2,7 @@ package com.swiftbank.notificationservice.service;
 
 import com.swiftbank.notificationservice.dto.MallingRequest;
 import com.swiftbank.notificationservice.dto.ResetPayload;
+import com.swiftbank.notificationservice.utils.HashUtils;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +50,7 @@ public class SendService {
         } catch (MessagingException e) {
             throw new RuntimeException(e);
         }
-        redisService.saveToken(resetPayload.getEmail(), passwordEncoder.encode(resetPayload.getResetToken()));
+        redisService.saveToken(resetPayload.getEmail(), HashUtils.sha256(resetPayload.getResetToken()));
     }
 
     private void sendEmail(MallingRequest request) throws MessagingException {

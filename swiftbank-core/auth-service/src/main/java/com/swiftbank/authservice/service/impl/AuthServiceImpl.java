@@ -11,6 +11,7 @@ import com.swiftbank.authservice.service.AuthService;
 import com.swiftbank.authservice.service.JwtService;
 import com.swiftbank.authservice.service.RabbitMQService;
 import com.swiftbank.authservice.service.RedisService;
+import com.swiftbank.authservice.utils.HashUtils;
 import com.swiftbank.authservice.utils.ValidationUtils;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -179,7 +180,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getToken() == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Token is invalid");
         }
-        String hashToken = passwordEncoder.encode(request.getToken());
+        String hashToken = HashUtils.sha256(request.getToken());
         String email = redisService.getValue(hashToken);
         if (email == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid token");
