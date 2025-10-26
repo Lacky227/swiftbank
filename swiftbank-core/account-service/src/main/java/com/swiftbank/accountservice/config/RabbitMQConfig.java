@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMQConfig {
     public static final String REGISTER_QUEUE_NAME = "register-queue";
     public static final String EXCHANGE_NAME = "auth-exchange";
-    public static final String RESET_ROUTING_KEY = "auth.to.account";
+    public static final String REGISTER_ROUTING_KEY = "auth.to.account";
 
     @Bean
     public Queue registerQueue() {
@@ -29,7 +29,7 @@ public class RabbitMQConfig {
 
     @Bean
     public Binding registerBinding(Queue resetQueue, DirectExchange exchange) {
-        return BindingBuilder.bind(resetQueue).to(exchange).with(RESET_ROUTING_KEY);
+        return BindingBuilder.bind(resetQueue).to(exchange).with(REGISTER_ROUTING_KEY);
     }
 
     @Bean
