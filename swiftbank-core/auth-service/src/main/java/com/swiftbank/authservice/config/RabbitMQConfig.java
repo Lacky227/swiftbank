@@ -14,12 +14,18 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
     public static final String RESET_QUEUE_NAME = "reset-password-queue";
+    public static final String REGISTER_QUEUE_NAME = "register-queue";
     public static final String EXCHANGE_NAME = "auth-exchange";
     public static final String RESET_ROUTING_KEY = "auth.to.reset";
+    public static final String REGISTER_ROUTING_KEY = "auth.to.account";
 
     @Bean
     public Queue resetQueue() {
         return new Queue(RESET_QUEUE_NAME, true);
+    }
+    @Bean
+    public Queue registerQueue() {
+        return new Queue(REGISTER_QUEUE_NAME, true);
     }
 
     @Bean
@@ -30,6 +36,10 @@ public class RabbitMQConfig {
     @Bean
     public Binding resetBinding(Queue resetQueue, DirectExchange exchange) {
         return BindingBuilder.bind(resetQueue).to(exchange).with(RESET_ROUTING_KEY);
+    }
+    @Bean
+    public Binding registerBinding(Queue registerQueue, DirectExchange exchange) {
+        return BindingBuilder.bind(registerQueue).to(exchange).with(REGISTER_ROUTING_KEY);
     }
 
     @Bean

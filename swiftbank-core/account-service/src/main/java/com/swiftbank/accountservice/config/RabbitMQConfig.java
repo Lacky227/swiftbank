@@ -14,12 +14,18 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
     public static final String REGISTER_QUEUE_NAME = "register-queue";
+    public static final String CREATED_QUEUE_NAME = "created-queue";
     public static final String EXCHANGE_NAME = "auth-exchange";
     public static final String REGISTER_ROUTING_KEY = "auth.to.account";
+    public static final String CREATED_ROUTING_KEY = "account.to.card";
 
     @Bean
     public Queue registerQueue() {
         return new Queue(REGISTER_QUEUE_NAME, true);
+    }
+    @Bean
+    public Queue createdQueue() {
+        return new Queue(CREATED_QUEUE_NAME, true);
     }
 
     @Bean
@@ -28,8 +34,12 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Binding registerBinding(Queue resetQueue, DirectExchange exchange) {
-        return BindingBuilder.bind(resetQueue).to(exchange).with(REGISTER_ROUTING_KEY);
+    public Binding registerBinding(Queue registerQueue, DirectExchange exchange) {
+        return BindingBuilder.bind(registerQueue).to(exchange).with(REGISTER_ROUTING_KEY);
+    }
+    @Bean
+    public Binding createdBinding(Queue createdQueue, DirectExchange exchange) {
+        return BindingBuilder.bind(createdQueue).to(exchange).with(CREATED_ROUTING_KEY);
     }
 
     @Bean
