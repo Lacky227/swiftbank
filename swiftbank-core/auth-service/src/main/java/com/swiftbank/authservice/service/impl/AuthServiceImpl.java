@@ -89,6 +89,13 @@ public class AuthServiceImpl implements AuthService {
         user.setToken(token);
 
         authRepository.save(user);
+
+        rabbitMQService.sendCreateAccount(
+                UserRegisteredPayload.builder()
+                        .userId(user.getId())
+                        .createdAt(user.getCreatedAt())
+                        .build()
+        );
         return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(
                 jwtService.generateToken(user.getEmail(), user.getRole().toString()),
                 token.getRefreshToken(),
