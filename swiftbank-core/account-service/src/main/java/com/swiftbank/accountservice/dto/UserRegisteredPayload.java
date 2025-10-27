@@ -11,6 +11,5 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class UserRegisteredPayload {
     private Long userId;
-    private String locale;
     LocalDateTime createdAt;
 }
