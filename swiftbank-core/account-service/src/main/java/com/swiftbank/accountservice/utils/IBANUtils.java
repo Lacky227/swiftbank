@@ -10,7 +10,6 @@ import org.iban4j.UnsupportedCountryException;
 import java.util.concurrent.ThreadLocalRandom;
 
 @UtilityClass
-@AllArgsConstructor
 public class IBANUtils {
     public String generateIBAN(String countryCode, String bankCode, AccountRepository accountRepository) {
         String accountNumber = generateUniqueAccountNumber(accountRepository);
