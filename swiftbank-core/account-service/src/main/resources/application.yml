@@ -1,0 +1,28 @@
+spring:
+  application:
+   name: account-service
+  datasource:
+    url: ${ACCOUNT_SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: ${ACCOUNT_SPRING_JPA_HIBERNATE_DDL_AUTO}
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST}
+    port: ${SPRING_RABBITMQ_PORT}
+    username: ${SPRING_RABBITMQ_USERNAME}
+    password: ${SPRING_RABBITMQ_PASSWORD}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE}
+
+country:
+  code: ${COUNTRY_CODE}
+bank:
+  code: ${BANK_CODE}
+
+server:
+  port: ${ACCOUNT_SERVER_PORT}
