@@ -36,6 +36,22 @@ public class AuthServiceImpl implements AuthService {
     private final RedisService  redisService;
 
     @Override
+    public ResponseEntity<?> getUser(Long userId) {
+        Optional<User> optionalUser = authRepository.findById(userId);
+        if (optionalUser.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        User user = optionalUser.get();
+        UserResponse userResponse = UserResponse.builder()
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .locale(user.getLocale())
+                .build();
+        return ResponseEntity.ok(userResponse);
+    }
+
+    @Override
     public ResponseEntity<?> register(RegisterRequest request) {
         if (ValidationUtils.firstNameInvalid(request.getFirstName())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("First name is required");
@@ -97,7 +113,7 @@ public class AuthServiceImpl implements AuthService {
                         .build()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(
-                jwtService.generateToken(user.getEmail(), user.getRole().toString()),
+                jwtService.generateToken(user.getId(), user.getRole().toString()),
                 token.getRefreshToken(),
                 user.getRole().toString()
         ));
@@ -123,7 +139,7 @@ public class AuthServiceImpl implements AuthService {
 
         authRepository.save(user);
         return ResponseEntity.status(HttpStatus.OK).body(new AuthResponse(
-                jwtService.generateToken(user.getEmail(), user.getRole().toString()),
+                jwtService.generateToken(user.getId(), user.getRole().toString()),
                 token.getRefreshToken(),
                 user.getRole().toString()
         ));
@@ -146,7 +162,7 @@ public class AuthServiceImpl implements AuthService {
         tokenRepository.save(foundToken.get());
 
         return ResponseEntity.status(HttpStatus.OK).body(new AuthResponse(
-                jwtService.generateToken(user.getEmail(), user.getRole().toString()),
+                jwtService.generateToken(user.getId(), user.getRole().toString()),
                 foundToken.get().getRefreshToken(),
                 user.getRole().toString()
         ));
@@ -194,7 +210,7 @@ public class AuthServiceImpl implements AuthService {
         authRepository.save(user);
         redisService.deleteValue(hashToken);
         return ResponseEntity.status(HttpStatus.OK).body(new AuthResponse(
-                jwtService.generateToken(email, user.getRole().toString()),
+                jwtService.generateToken(user.getId(), user.getRole().toString()),
                 refreshToken,
                 user.getRole().toString()
         ));
