@@ -1,5 +1,6 @@
 package com.swiftbank.accountservice.service;
 
+import com.swiftbank.accountservice.dto.GetBalanceRequest;
 import com.swiftbank.accountservice.dto.OperationFundsRequest;
 import com.swiftbank.accountservice.dto.UserRegisteredPayload;
 import com.swiftbank.accountservice.exceptions.InsufficientFundsException;
