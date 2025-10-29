@@ -9,4 +9,5 @@ import lombok.*;
 @NoArgsConstructor
 public class AccountCreatedPayload {
     private String accountNumber;
+    private Long userId;
 }
