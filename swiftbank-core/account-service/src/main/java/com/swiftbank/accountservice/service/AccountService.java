@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 public interface AccountService {
     void createAccountForNewUser(UserRegisteredPayload payload);
     ResponseEntity<?> getAccountsByUserId(Long userId);
-    ResponseEntity<?> getBalance(String accountNumber);
+    ResponseEntity<?> getBalance(GetBalanceRequest request);
     ResponseEntity<?> debitAccount(OperationFundsRequest request) throws InsufficientFundsException;
     ResponseEntity<?> creditAccount(OperationFundsRequest request);
 }
