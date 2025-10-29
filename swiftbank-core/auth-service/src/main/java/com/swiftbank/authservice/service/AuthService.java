@@ -4,6 +4,7 @@ import com.swiftbank.authservice.dto.*;
 import org.springframework.http.ResponseEntity;
 
 public interface AuthService {
+    ResponseEntity<?> getUser(Long userId);
     ResponseEntity<?> register(RegisterRequest request);
     ResponseEntity<?> login(LoginRequest request);
     ResponseEntity<?> refresh(RefreshTokenRequest request);
