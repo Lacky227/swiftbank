@@ -20,7 +20,7 @@ public class RabbitMQService {
     public void sendCreateAccount(UserRegisteredPayload payload) {
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_NAME,
-                RabbitMQConfig.REGISTER_QUEUE_NAME,
+                RabbitMQConfig.REGISTER_ROUTING_KEY,
                 payload
         );
     }
