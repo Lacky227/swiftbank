@@ -17,9 +17,9 @@ public class JwtService {
     @Value("${jwt.secret-key}")
     private String SECRET_KEY;
 
-    public String generateToken(String email, String role) {
+    public String generateToken(Long userId, String role) {
         return Jwts.builder()
-                .setSubject(email)
+                .setSubject(userId.toString())
                 .claim("role", role)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
