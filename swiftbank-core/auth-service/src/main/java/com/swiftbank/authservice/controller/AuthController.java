@@ -4,16 +4,18 @@ import com.swiftbank.authservice.dto.*;
 import com.swiftbank.authservice.service.AuthService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
 @AllArgsConstructor
 public class AuthController {
     private final AuthService authService;
+
+    @GetMapping("/me")
+    ResponseEntity<?> getUser(@RequestHeader("X-User-Id") Long userId) {
+        return authService.getUser(userId);
+    }
 
     @PostMapping("/register")
     ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest) {
