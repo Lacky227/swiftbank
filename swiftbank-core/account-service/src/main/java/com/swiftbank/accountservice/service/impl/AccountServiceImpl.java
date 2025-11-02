@@ -4,7 +4,6 @@ import com.swiftbank.accountservice.dto.*;
 import com.swiftbank.accountservice.exceptions.CreateAccountException;
 import com.swiftbank.accountservice.exceptions.InsufficientFundsException;
 import com.swiftbank.accountservice.models.Account;
-import com.swiftbank.accountservice.models.enumModels.Currency;
 import com.swiftbank.accountservice.repository.AccountRepository;
 import com.swiftbank.accountservice.service.AccountService;
 import com.swiftbank.accountservice.service.RabbitMQServiceProducer;
@@ -14,7 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -24,9 +22,9 @@ import java.util.Optional;
 public class AccountServiceImpl implements AccountService {
     private final AccountRepository accountRepository;
     private final RabbitMQServiceProducer rabbitMQServiceProducer;
-    @Value("${country.code}")
+    @Value("${account.country-code}")
     private String COUNTRY_CODE;
-    @Value("${bank.code}")
+    @Value("${account.bank-code}")
     private String BANK_CODE;
 
     @Override
@@ -44,9 +42,6 @@ public class AccountServiceImpl implements AccountService {
         Account account = Account.builder()
                 .userId(payload.getUserId())
                 .number(IBANUtils.generateIBAN(COUNTRY_CODE, BANK_CODE, accountRepository))
-                .balance(BigDecimal.ZERO)
-                .currency(Currency.UAH)
-                .active(true)
                 .createdAt(payload.getCreatedAt())
                 .build();
         accountRepository.save(account);
@@ -68,11 +63,14 @@ public class AccountServiceImpl implements AccountService {
         List<Account> accounts = accountOptional.get();
         List<AccountResponse> accountResponseList = new ArrayList<>();
         accounts.forEach(account -> {
-            AccountResponse accountResponse = AccountResponse.builder()
-                    .balance(account.getBalance())
-                    .currency(account.getCurrency().toString())
-                    .build();
-            accountResponseList.add(accountResponse);
+            if (account != null) {
+                AccountResponse accountResponse = AccountResponse.builder()
+                        .accountNumber(account.getNumber())
+                        .balance(account.getBalance())
+                        .currency(account.getCurrency().toString())
+                        .build();
+                accountResponseList.add(accountResponse);
+            }
         });
         return ResponseEntity.ok(accountResponseList);
     }

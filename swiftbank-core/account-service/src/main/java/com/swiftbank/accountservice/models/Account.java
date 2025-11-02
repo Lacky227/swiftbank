@@ -36,4 +36,11 @@ public class Account {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.balance = BigDecimal.ZERO;
+        this.currency = Currency.UAH;
+        this.active = true;
+    }
 }

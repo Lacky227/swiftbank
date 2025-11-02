@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 public class RabbitMQServiceConsumer {
     private AccountService accountService;
 
-    @RabbitListener(queues = RabbitMQConfig.REGISTER_QUEUE_NAME)
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_USER_REGISTERED)
     private void registerAccount(UserRegisteredPayload payload) {
         accountService.createAccountForNewUser(payload);
     }

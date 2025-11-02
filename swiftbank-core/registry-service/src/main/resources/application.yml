@@ -2,12 +2,24 @@ spring:
   application:
     name: registry-service
 
+# Eureka Server
 eureka:
   client:
-    register-with-eureka: ${EUREKA_CLIENT_REGISTER_WITH_EUREKA}
-    fetch-registry: ${EUREKA_CLIENT_FETCH_REGISTRY}
+    register-with-eureka: ${EUREKA_REGISTER_WITH_EUREKA}
+    fetch-registry: ${EUREKA_FETCH_REGISTRY}
   server:
-    enable-self-preservation: ${EUREKA_SERVER_ENABLE_SELF_PRESERVATION}
+    enable-self-preservation: ${EUREKA_ENABLE_SELF_PRESERVATION}
+    eviction-interval-timer-in-ms: 15000
+  instance:
+    hostname: localhost
 
+# Server
 server:
-  port: ${REGISTRY_SERVER_PORT}
+  port: ${SERVER_PORT}
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.netflix.eureka: WARN
+    com.netflix.discovery: WARN

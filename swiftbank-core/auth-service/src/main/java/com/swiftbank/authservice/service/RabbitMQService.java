@@ -13,14 +13,14 @@ public class RabbitMQService {
 
     public void sendResetPassword(Object message) {
         rabbitTemplate.convertAndSend(
-                RabbitMQConfig.EXCHANGE_NAME,
-                RabbitMQConfig.RESET_ROUTING_KEY,
+                RabbitMQConfig.EXCHANGE,
+                RabbitMQConfig.EVENT_PASSWORD_RESET_REQUESTED,
                 message);
     }
     public void sendCreateAccount(UserRegisteredPayload payload) {
         rabbitTemplate.convertAndSend(
-                RabbitMQConfig.EXCHANGE_NAME,
-                RabbitMQConfig.REGISTER_ROUTING_KEY,
+                RabbitMQConfig.EXCHANGE,
+                RabbitMQConfig.EVENT_USER_REGISTERED,
                 payload
         );
     }

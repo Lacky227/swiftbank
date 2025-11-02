@@ -21,10 +21,14 @@ public class RouteConfig {
                 .route("auth-service-open", r -> r
                         .path("/auth/**")
                         .uri("lb://auth-service"))
-                .route("account-service", r -> r
+                .route("account-service-protected", r -> r
                         .path("/account/user")
                         .filters(f -> f.filter(accessFilter))
                         .uri("lb://account-service"))
+                .route("card-service-protected", r -> r
+                        .path("/card/account/**")
+                        .filters(f -> f.filter(accessFilter))
+                        .uri("lb://card-service"))
                 .build();
     }
 }

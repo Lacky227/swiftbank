@@ -2,7 +2,7 @@ package com.swiftbank.accountservice.config;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -13,43 +13,42 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
-    public static final String REGISTER_QUEUE_NAME = "register-queue";
-    public static final String CREATED_QUEUE_NAME = "created-queue";
-    public static final String EXCHANGE_NAME = "auth-exchange";
-    public static final String REGISTER_ROUTING_KEY = "auth.to.account";
-    public static final String CREATED_ROUTING_KEY = "account.to.card";
+
+    public static final String EXCHANGE = "swiftbank.events";
+
+    public static final String QUEUE_USER_REGISTERED = "queue.user.registered";
+
+    public static final String EVENT_USER_REGISTERED = "event.user.registered";
+    public static final String EVENT_ACCOUNT_CREATED = "event.account.created";
 
     @Bean
-    public Queue registerQueue() {
-        return new Queue(REGISTER_QUEUE_NAME, true);
-    }
-    @Bean
-    public Queue createdQueue() {
-        return new Queue(CREATED_QUEUE_NAME, true);
-    }
-
-    @Bean
-    public DirectExchange exchange() {
-        return new DirectExchange(EXCHANGE_NAME);
+    public TopicExchange exchange() {
+        return new TopicExchange(EXCHANGE, true, false);
     }
 
     @Bean
-    public Binding registerBinding(Queue registerQueue, DirectExchange exchange) {
-        return BindingBuilder.bind(registerQueue).to(exchange).with(REGISTER_ROUTING_KEY);
-    }
-    @Bean
-    public Binding createdBinding(Queue createdQueue, DirectExchange exchange) {
-        return BindingBuilder.bind(createdQueue).to(exchange).with(CREATED_ROUTING_KEY);
+    public Queue userRegisteredQueue() {
+        return new Queue(QUEUE_USER_REGISTERED, true);
     }
 
     @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter jsonMessageConverter) {
-        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        rabbitTemplate.setMessageConverter(jsonMessageConverter);
-        return rabbitTemplate;
+    public Binding userRegisteredBinding(Queue userRegisteredQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(userRegisteredQueue)
+                .to(exchange)
+                .with(EVENT_USER_REGISTERED);
     }
+
     @Bean
-    public MessageConverter jsonMessageConverter() {
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
+                                         MessageConverter messageConverter) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(messageConverter);
+        return template;
+    }
+
+    @Bean
+    public MessageConverter messageConverter() {
         return new Jackson2JsonMessageConverter();
     }
 }

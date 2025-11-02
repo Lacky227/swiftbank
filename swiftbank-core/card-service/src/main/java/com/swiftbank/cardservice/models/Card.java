@@ -17,7 +17,7 @@ public class Card {
     private Long id;
 
     @Column(nullable = false)
-    private String IBAN;
+    private String accountNumber;
 
     @Column(nullable = false)
     private Long userId;

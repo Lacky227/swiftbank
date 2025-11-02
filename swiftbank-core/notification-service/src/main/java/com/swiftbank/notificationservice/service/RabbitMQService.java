@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 public class RabbitMQService {
     private final SendService sendService;
 
-    @RabbitListener(queues = RabbitMQConfig.RESET_QUEUE_NAME)
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_PASSWORD_RESET)
     public void receiveMessage(ResetPayload message) {
         sendService.forgotPassword(message);
     }

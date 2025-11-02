@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class RedisService {
     private final StringRedisTemplate stringRedisTemplate;
-    @Value("${ttl.minutes}")
+    @Value("${notification.reset-password.token-ttl-minutes}")
     private byte TTL_MINUTES;
 
     public void saveToken(String email, String hashToken) {

@@ -4,7 +4,6 @@ import com.swiftbank.authservice.dto.*;
 import com.swiftbank.authservice.models.DeviceInfo;
 import com.swiftbank.authservice.models.Token;
 import com.swiftbank.authservice.models.User;
-import com.swiftbank.authservice.models.enumModel.UserRole;
 import com.swiftbank.authservice.repository.AuthRepository;
 import com.swiftbank.authservice.repository.TokenRepository;
 import com.swiftbank.authservice.service.AuthService;
@@ -13,7 +12,8 @@ import com.swiftbank.authservice.service.RabbitMQService;
 import com.swiftbank.authservice.service.RedisService;
 import com.swiftbank.authservice.utils.HashUtils;
 import com.swiftbank.authservice.utils.ValidationUtils;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,7 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
     private final AuthRepository authRepository;
     private final TokenRepository tokenRepository;
@@ -34,6 +34,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final RabbitMQService rabbitMQService;
     private final RedisService  redisService;
+    @Value("${jwt.refresh-token-expiration}")
+    private long refreshTokenExpiration;
 
     @Override
     public ResponseEntity<?> getUser(Long userId) {
@@ -77,10 +79,6 @@ public class AuthServiceImpl implements AuthService {
                 .acceptTerms(request.isAcceptTerms())
                 .marketingConsent(request.isMarketingConsent())
                 .registrationSource(request.getRegistrationSource())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .role(UserRole.USER)
-                .active(true)
                 .build();
         DeviceInfo devices =  DeviceInfo.builder()
                 .deviceId(request.getDeviceInfo().getDeviceId())
@@ -90,16 +88,13 @@ public class AuthServiceImpl implements AuthService {
                 .appVersion(request.getDeviceInfo().getAppVersion())
                 .userAgent(request.getDeviceInfo().getUserAgent())
                 .ipAddress(request.getDeviceInfo().getIpAddress())
-                .registeredAt(LocalDateTime.now())
-                .lastUsedAt(LocalDateTime.now())
-                .trusted(true)
                 .user(user)
                 .build();
         user.setDevices(List.of(devices));
 
         Token token = Token.builder()
                 .refreshToken(UUID.randomUUID().toString())
-                .expiresAt(LocalDateTime.now().plusDays(60))
+                .expiresAt(LocalDateTime.now().plusNanos(refreshTokenExpiration))
                 .user(user)
                 .build();
         user.setToken(token);
@@ -130,13 +125,22 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = userOpt.get();
-        Token token = Token.builder()
-                .refreshToken(UUID.randomUUID().toString())
-                .expiresAt(LocalDateTime.now().plusDays(60))
-                .user(user)
-                .build();
-        user.setToken(token);
+        Optional<Token> tokenOpt = tokenRepository.findByRefreshToken(user.getToken().getRefreshToken());
+        Token token;
+        if (tokenOpt.isPresent()) {
+            token = tokenOpt.get();
+            token.setRefreshToken(UUID.randomUUID().toString());
+            token.setExpiresAt(LocalDateTime.now().plusNanos(refreshTokenExpiration));
+        } else {
+            token = Token.builder()
+                    .refreshToken(UUID.randomUUID().toString())
+                    .expiresAt(LocalDateTime.now().plusNanos(refreshTokenExpiration))
+                    .user(user)
+                    .build();
+        }
 
+        user.setToken(token);
+        user.setLastLoginAt(LocalDateTime.now());
         authRepository.save(user);
         return ResponseEntity.status(HttpStatus.OK).body(new AuthResponse(
                 jwtService.generateToken(user.getId(), user.getRole().toString()),
@@ -182,7 +186,7 @@ public class AuthServiceImpl implements AuthService {
         }
         ResetPayload resetPayload = ResetPayload.builder()
                 .email(request.getEmail())
-                .resetToken(UUID.randomUUID().toString())
+                .resetToken(HashUtils.sha256(UUID.randomUUID().toString()))
                 .locale(request.getLocale())
                 .build();
         rabbitMQService.sendResetPassword(resetPayload);
@@ -194,8 +198,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getToken() == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired token");
         }
-        String hashToken = HashUtils.sha256(request.getToken());
-        String email = redisService.getValue(hashToken);
+        String email = redisService.getValue(request.getToken());
         Optional<User> userOpt = (email != null) ? authRepository.findByEmail(email) : Optional.empty();
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired token");
@@ -207,8 +210,11 @@ public class AuthServiceImpl implements AuthService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         String refreshToken = UUID.randomUUID().toString();
         user.getToken().setRefreshToken(refreshToken);
+        if (user.getToken().getExpiresAt().isBefore(LocalDateTime.now())) {
+            user.getToken().setExpiresAt(LocalDateTime.now().plusNanos(refreshTokenExpiration));
+        }
         authRepository.save(user);
-        redisService.deleteValue(hashToken);
+        redisService.deleteValue(request.getToken());
         return ResponseEntity.status(HttpStatus.OK).body(new AuthResponse(
                 jwtService.generateToken(user.getId(), user.getRole().toString()),
                 refreshToken,

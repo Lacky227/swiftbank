@@ -1,28 +1,65 @@
 spring:
   application:
-   name: account-service
+    name: account-service
+
+  # Database
   datasource:
-    url: ${ACCOUNT_SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+
   jpa:
     hibernate:
-      ddl-auto: ${ACCOUNT_SPRING_JPA_HIBERNATE_DDL_AUTO}
-  rabbitmq:
-    host: ${SPRING_RABBITMQ_HOST}
-    port: ${SPRING_RABBITMQ_PORT}
-    username: ${SPRING_RABBITMQ_USERNAME}
-    password: ${SPRING_RABBITMQ_PASSWORD}
+      ddl-auto: ${HIBERNATE_DDL_AUTO}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        show_sql: false
+    open-in-view: false
 
+  # RabbitMQ
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 3000
+          max-attempts: 3
+
+# Eureka Client
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE}
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 30
 
-country:
-  code: ${COUNTRY_CODE}
-bank:
-  code: ${BANK_CODE}
+# Business Logic
+account:
+  country-code: ${COUNTRY_CODE}
+  bank-code: ${BANK_CODE}
 
+# Server
 server:
-  port: ${ACCOUNT_SERVER_PORT}
+  port: ${SERVER_PORT}
+  error:
+    include-message: always
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.swiftbank.accountservice: DEBUG

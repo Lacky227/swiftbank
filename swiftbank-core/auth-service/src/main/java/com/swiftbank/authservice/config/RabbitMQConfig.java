@@ -1,9 +1,6 @@
 package com.swiftbank.authservice.config;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.DirectExchange;
-import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -13,43 +10,26 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
-    public static final String RESET_QUEUE_NAME = "reset-password-queue";
-    public static final String REGISTER_QUEUE_NAME = "register-queue";
-    public static final String EXCHANGE_NAME = "auth-exchange";
-    public static final String RESET_ROUTING_KEY = "auth.to.reset";
-    public static final String REGISTER_ROUTING_KEY = "auth.to.account";
+    public static final String EXCHANGE = "swiftbank.events";
+
+    public static final String EVENT_USER_REGISTERED = "event.user.registered";
+    public static final String EVENT_PASSWORD_RESET_REQUESTED = "event.password.reset.requested";
 
     @Bean
-    public Queue resetQueue() {
-        return new Queue(RESET_QUEUE_NAME, true);
-    }
-    @Bean
-    public Queue registerQueue() {
-        return new Queue(REGISTER_QUEUE_NAME, true);
+    public TopicExchange exchange() {
+        return new TopicExchange(EXCHANGE, true, false);
     }
 
     @Bean
-    public DirectExchange exchange() {
-        return new DirectExchange(EXCHANGE_NAME);
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
+                                         MessageConverter messageConverter) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(messageConverter);
+        return template;
     }
 
     @Bean
-    public Binding resetBinding(Queue resetQueue, DirectExchange exchange) {
-        return BindingBuilder.bind(resetQueue).to(exchange).with(RESET_ROUTING_KEY);
-    }
-    @Bean
-    public Binding registerBinding(Queue registerQueue, DirectExchange exchange) {
-        return BindingBuilder.bind(registerQueue).to(exchange).with(REGISTER_ROUTING_KEY);
-    }
-
-    @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,  MessageConverter jsonMessageConverter) {
-        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        rabbitTemplate.setMessageConverter(jsonMessageConverter);
-        return rabbitTemplate;
-    }
-    @Bean
-    public MessageConverter jsonMessageConverter() {
+    public MessageConverter messageConverter() {
         return new Jackson2JsonMessageConverter();
     }
 }

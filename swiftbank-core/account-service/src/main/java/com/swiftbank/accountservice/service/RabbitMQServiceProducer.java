@@ -13,8 +13,8 @@ public class RabbitMQServiceProducer {
 
     public void sendMessage(AccountCreatedPayload payload) {
         rabbitTemplate.convertAndSend(
-                RabbitMQConfig.EXCHANGE_NAME,
-                RabbitMQConfig.CREATED_ROUTING_KEY,
+                RabbitMQConfig.EXCHANGE,
+                RabbitMQConfig.EVENT_ACCOUNT_CREATED,
                 payload);
     }
 }

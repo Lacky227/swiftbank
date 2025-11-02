@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 @AllArgsConstructor
 public class RabbitMQServiceConsumer {
     private final CardService cardService;
-    @RabbitListener(queues = RabbitMQConfig.CREATED_QUEUE_NAME)
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_ACCOUNT_CREATED)
     private void createdCard(AccountCreatePayload accountCreatePayload) {
         cardService.createCardForNewAccount(accountCreatePayload);
     }

@@ -6,6 +6,7 @@ import lombok.experimental.UtilityClass;
 import org.iban4j.CountryCode;
 import org.iban4j.Iban;
 import org.iban4j.UnsupportedCountryException;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.concurrent.ThreadLocalRandom;
 

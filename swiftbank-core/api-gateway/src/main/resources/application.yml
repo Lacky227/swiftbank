@@ -2,13 +2,27 @@ spring:
   application:
     name: api-gateway
 
+# Eureka Client
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE}
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
 
+# JWT Configuration
 jwt:
   secret-key: ${JWT_SECRET_KEY}
 
+# Server
 server:
-  port: ${GATEWAY_SERVER_PORT}
+  port: ${SERVER_PORT}
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.swiftbank.apigateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG

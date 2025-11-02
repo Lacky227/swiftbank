@@ -2,7 +2,7 @@ package com.swiftbank.notificationservice.config;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -13,31 +13,40 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
-    public static final String RESET_QUEUE_NAME = "reset-password-queue";
-    public static final String EXCHANGE_NAME = "auth-exchange";
-    public static final String RESET_ROUTING_KEY = "auth.to.reset";
+
+    public static final String EXCHANGE = "swiftbank.events";
+
+    public static final String QUEUE_PASSWORD_RESET = "queue.password.reset.requested";
+
+    public static final String EVENT_PASSWORD_RESET_REQUESTED = "event.password.reset.requested";
 
     @Bean
-    public Queue resetQueue() {
-        return new Queue(RESET_QUEUE_NAME, true);
+    public TopicExchange exchange() {
+        return new TopicExchange(EXCHANGE, true, false);
     }
 
     @Bean
-    public DirectExchange exchange() {
-        return new DirectExchange(EXCHANGE_NAME);
+    public Queue passwordResetQueue() {
+        return new Queue(QUEUE_PASSWORD_RESET, true);
     }
 
     @Bean
-    public Binding resetBinding(Queue resetQueue, DirectExchange exchange) {
-        return BindingBuilder.bind(resetQueue).to(exchange).with(RESET_ROUTING_KEY);
+    public Binding passwordResetBinding(Queue passwordResetQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(passwordResetQueue)
+                .to(exchange)
+                .with(EVENT_PASSWORD_RESET_REQUESTED);
     }
 
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
-        return new RabbitTemplate(connectionFactory);
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(messageConverter());
+        return template;
     }
+
     @Bean
-    public MessageConverter jsonMessageConverter() {
+    public MessageConverter messageConverter() {
         return new Jackson2JsonMessageConverter();
     }
 }

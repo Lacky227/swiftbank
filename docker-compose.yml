@@ -1,36 +1,57 @@
+version: '3.8'
+
 services:
+  #########################################
+  # Infrastructure Services
+  #########################################
+  
   postgres:
-    image: postgres:17
-    container_name: postgres
+    image: postgres:17-alpine
+    container_name: swiftbank-postgres
+    restart: unless-stopped
     ports:
       - "${POSTGRES_PORT}:5432"
     networks:
       - swiftbank-network
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASS}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_MULTIPLE_DATABASES: ${DB_AUTH},${DB_ACCOUNT},${DB_CARD}
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    restart: always
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
-    image: redis:latest
-    container_name: redis
+    image: redis:7-alpine
+    container_name: swiftbank-redis
+    restart: unless-stopped
     ports:
       - "${REDIS_PORT}:6379"
     networks:
       - swiftbank-network
-    command:
-      - redis-server
-      - --requirepass ${REDIS_PASSWORD}
-      - --appendonly yes
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
-    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: redis-commander
+    container_name: swiftbank-redis-commander
+    restart: unless-stopped
     depends_on:
       - redis
     ports:
@@ -38,12 +59,12 @@ services:
     networks:
       - swiftbank-network
     environment:
-      - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD}
-    restart: always
+      REDIS_HOSTS: local:${REDIS_HOST}:${REDIS_PORT}:0:${REDIS_PASSWORD}
 
   rabbitmq:
-    image: rabbitmq:management
-    container_name: rabbitmq
+    image: rabbitmq:3-management-alpine
+    container_name: swiftbank-rabbitmq
+    restart: unless-stopped
     ports:
       - "${RABBITMQ_PORT}:5672"
       - "${RABBITMQ_MANAGEMENT_PORT}:15672"
@@ -51,169 +72,220 @@ services:
       - swiftbank-network
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-    restart: always
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
-
+  #########################################
+  # Service Discovery
+  #########################################
+  
   registry-service:
     build:
       context: ./swiftbank-core/registry-service
       dockerfile: Dockerfile
-    container_name: registry-service
+    container_name: swiftbank-registry
+    restart: unless-stopped
     ports:
-      - "8761:8761"
+      - "${PORT_REGISTRY}:${PORT_REGISTRY}"
     networks:
       - swiftbank-network
     environment:
-      EUREKA_CLIENT_REGISTER_WITH_EUREKA: ${EUREKA_CLIENT_REGISTER_WITH_EUREKA}
-      EUREKA_CLIENT_FETCH_REGISTRY: ${EUREKA_CLIENT_FETCH_REGISTRY}
-      EUREKA_SERVER_ENABLE_SELF_PRESERVATION: ${EUREKA_SERVER_ENABLE_SELF_PRESERVATION}
-      REGISTRY_SERVER_PORT: ${REGISTRY_SERVER_PORT}
-    restart: always
+      SERVER_PORT: ${PORT_REGISTRY}
+      EUREKA_REGISTER_WITH_EUREKA: ${EUREKA_REGISTER_WITH_EUREKA}
+      EUREKA_FETCH_REGISTRY: ${EUREKA_FETCH_REGISTRY}
+      EUREKA_ENABLE_SELF_PRESERVATION: ${EUREKA_ENABLE_SELF_PRESERVATION}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT_REGISTRY}/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
+  #########################################
+  # API Gateway
+  #########################################
+  
   api-gateway:
     build:
       context: ./swiftbank-core/api-gateway
       dockerfile: Dockerfile
-    container_name: api-gateway
+    container_name: swiftbank-gateway
+    restart: unless-stopped
     depends_on:
-      - registry-service
+      registry-service:
+        condition: service_healthy
+    ports:
+      - "${PORT_GATEWAY}:${PORT_GATEWAY}"
     networks:
       - swiftbank-network
-    ports:
-      - "8080:8080"
     environment:
-      GATEWAY_SERVER_PORT: ${GATEWAY_SERVER_PORT}
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: ${EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE}
+      SERVER_PORT: ${PORT_GATEWAY}
+      EUREKA_CLIENT_SERVICE_URL: ${EUREKA_URL}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-    restart: always
 
+  #########################################
+  # Business Services
+  #########################################
+  
   auth-service:
     build:
       context: ./swiftbank-core/auth-service
       dockerfile: Dockerfile
-    container_name: auth-service
+    container_name: swiftbank-auth
+    restart: unless-stopped
     depends_on:
-      - postgres
-      - registry-service
-      - redis
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
     networks:
       - swiftbank-network
     environment:
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASS}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
-      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST}
-      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT}
-      SPRING_RABBITMQ_USERNAME: ${SPRING_RABBITMQ_USERNAME}
-      SPRING_RABBITMQ_PASSWORD: ${SPRING_RABBITMQ_PASSWORD}
-      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST}
-      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT}
-      SPRING_DATA_REDIS_PASSWORD: ${SPRING_DATA_REDIS_PASSWORD}
+      SERVER_PORT: ${PORT_AUTH}
+
+      DB_URL: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${DB_AUTH}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      HIBERNATE_DDL_AUTO: ${HIBERNATE_DDL_AUTO}
+
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      AUTH_SERVER_PORT: ${AUTH_SERVER_PORT}
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: ${EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE}
-    restart: always
+
+      EUREKA_CLIENT_SERVICE_URL: ${EUREKA_URL}
 
   account-service:
     build:
       context: ./swiftbank-core/account-service
       dockerfile: Dockerfile
-    container_name: account-service
+    container_name: swiftbank-account
+    restart: unless-stopped
     depends_on:
-      - postgres
-      - registry-service
-      - redis
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
     networks:
       - swiftbank-network
     environment:
-      ACCOUNT_SPRING_DATASOURCE_URL: ${ACCOUNT_SPRING_DATASOURCE_URL}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASS}
-      ACCOUNT_SPRING_JPA_HIBERNATE_DDL_AUTO: ${ACCOUNT_SPRING_JPA_HIBERNATE_DDL_AUTO}
-      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST}
-      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT}
-      SPRING_RABBITMQ_USERNAME: ${SPRING_RABBITMQ_USERNAME}
-      SPRING_RABBITMQ_PASSWORD: ${SPRING_RABBITMQ_PASSWORD}
-      COUNTRY_CODE: ${COUNTRY_CODE}
-      BANK_CODE: ${BANK_CODE}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: ${EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE}
-      ACCOUNT_SERVER_PORT: ${ACCOUNT_SERVER_PORT}
-    restart: always
+      SERVER_PORT: ${PORT_ACCOUNT}
+
+      DB_URL: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${DB_ACCOUNT}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      HIBERNATE_DDL_AUTO: ${HIBERNATE_DDL_AUTO}
+
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+
+      COUNTRY_CODE: ${ACCOUNT_COUNTRY_CODE}
+      BANK_CODE: ${ACCOUNT_BANK_CODE}
+
+      EUREKA_CLIENT_SERVICE_URL: ${EUREKA_URL}
 
   card-service:
     build:
       context: ./swiftbank-core/card-service
       dockerfile: Dockerfile
-    container_name: card-service
+    container_name: swiftbank-card
+    restart: unless-stopped
     depends_on:
-      - postgres
-      - registry-service
-      - redis
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
     networks:
       - swiftbank-network
     environment:
-      CARD_SPRING_DATASOURCE_URL: ${CARD_SPRING_DATASOURCE_URL}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASS}
-      CARD_SPRING_JPA_HIBERNATE_DDL_AUTO: ${CARD_SPRING_JPA_HIBERNATE_DDL_AUTO}
-      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST}
-      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT}
-      SPRING_RABBITMQ_USERNAME: ${SPRING_RABBITMQ_USERNAME}
-      SPRING_RABBITMQ_PASSWORD: ${SPRING_RABBITMQ_PASSWORD}
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: ${EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE}
-      CARD_SERVER_PORT: ${CARD_SERVER_PORT}
-    restart: always
+      SERVER_PORT: ${PORT_CARD}
+
+      DB_URL: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${DB_CARD}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      HIBERNATE_DDL_AUTO: ${HIBERNATE_DDL_AUTO}
+
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+
+      EUREKA_CLIENT_SERVICE_URL: ${EUREKA_URL}
 
   notification-service:
     build:
       context: ./swiftbank-core/notification-service
       dockerfile: Dockerfile
-    container_name: notification-service
+    container_name: swiftbank-notification
+    restart: unless-stopped
     depends_on:
-      - redis
-      - rabbitmq
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - swiftbank-network
-    ports:
-      - "${NOTIFY_SERVER_PORT}:${NOTIFY_SERVER_PORT}"
     environment:
-      SERVER_PORT: ${NOTIFY_SERVER_PORT}
-      SPRING_APPLICATION_NAME: notification-service
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: ${EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE}
-      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST}
-      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT}
-      SPRING_RABBITMQ_USERNAME: ${SPRING_RABBITMQ_USERNAME}
-      SPRING_RABBITMQ_PASSWORD: ${SPRING_RABBITMQ_PASSWORD}
-      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST}
-      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT}
-      SPRING_DATA_REDIS_PASSWORD: ${SPRING_DATA_REDIS_PASSWORD}
-      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST}
-      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT}
-      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
-      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH}
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE}
-      NOTIFICATION_FROM: ${NOTIFICATION_FROM}
-      NOTIFICATION_SUBJECT: ${NOTIFICATION_SUBJECT}
-      NOTIFICATION_LINK_EN: ${NOTIFICATION_LINK_EN}
-      NOTIFICATION_LINK_UA: ${NOTIFICATION_LINK_UA}
-      REDIS_TTL_MINUTES: ${REDIS_TTL_MINUTES}
-    restart: always
+      SERVER_PORT: ${PORT_NOTIFICATION}
 
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_USERNAME: ${EMAIL_USERNAME}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_SMTP_AUTH: ${EMAIL_SMTP_AUTH}
+      EMAIL_SMTP_STARTTLS: ${EMAIL_SMTP_STARTTLS}
+
+      RESET_PASSWORD_SUBJECT: ${RESET_PASSWORD_SUBJECT}
+      RESET_PASSWORD_LINK_EN: ${RESET_PASSWORD_LINK_EN}
+      RESET_PASSWORD_LINK_UA: ${RESET_PASSWORD_LINK_UA}
+      RESET_TOKEN_TTL_MINUTES: ${RESET_TOKEN_TTL_MINUTES}
+
+#########################################
+# Volumes
+#########################################
 volumes:
-  pgdata:
+  postgres_data:
+    driver: local
   redis_data:
+    driver: local
   rabbitmq_data:
-  redis_insight_data:
+    driver: local
 
+#########################################
+# Networks
+#########################################
 networks:
   swiftbank-network:
     driver: bridge
+    name: swiftbank-network

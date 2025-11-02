@@ -2,7 +2,6 @@ package com.swiftbank.notificationservice.service;
 
 import com.swiftbank.notificationservice.dto.MallingRequest;
 import com.swiftbank.notificationservice.dto.ResetPayload;
-import com.swiftbank.notificationservice.utils.HashUtils;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +9,6 @@ import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -21,15 +19,14 @@ public class SendService {
     private final SpringTemplateEngine templateEngine;
     private final JavaMailSender mailSender;
     private final RedisService redisService;
-    private final PasswordEncoder passwordEncoder;
 
     @Value("${notification.from}")
     private String from;
-    @Value("${notification.subject}")
+    @Value("${notification.reset-password.subject}")
     private String subject;
-    @Value("${notification.link-en}")
+    @Value("${notification.reset-password.link-en}")
     private String linkEN;
-    @Value("${notification.link-ua}")
+    @Value("${notification.reset-password.link-ua}")
     private String linkUA;
 
     public void forgotPassword(ResetPayload resetPayload) {
@@ -50,7 +47,7 @@ public class SendService {
         } catch (MessagingException e) {
             throw new RuntimeException(e);
         }
-        redisService.saveToken(resetPayload.getEmail(), HashUtils.sha256(resetPayload.getResetToken()));
+        redisService.saveToken(resetPayload.getEmail(), resetPayload.getResetToken());
     }
 
     private void sendEmail(MallingRequest request) throws MessagingException {
