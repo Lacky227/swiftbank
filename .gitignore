@@ -18,3 +18,8 @@ target/
 *.log
 
 ./secrets/
+
+./swiftbank-security/.venv/
+
+./swiftbank-security/models/
+./swiftbank-security/utils/
